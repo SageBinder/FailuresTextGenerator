@@ -47,7 +47,12 @@ class TextGenerator:
             exit(1)
         print("Character mapping loaded successfully!")
 
+        print("id_to_char:")
         print(self.reversed_dictionary)
+
+        print("char_to_id:")
+        print(self.char_to_id)
+
         print(self.model.summary())
 
     def generate_chars(self,
@@ -68,14 +73,13 @@ class TextGenerator:
         np.random.seed(random_seed)
 
         last_seed_char = None if max_seed_chars_before_delimiter is None else self.message_delimiter
-        _seed_chars = \
-            seed_chars if seed_chars is not None \
-                else self.__generate_seed(min_iters=min_seed_chars_generated,
-                                          last_char=last_seed_char,
-                                          max_until_last_char=max_seed_chars_before_delimiter,
-                                          temperature=temperature,
-                                          digit_temperature=digit_temperature,
-                                          print_progress=print_progress)
+        _seed_chars = self.__generate_seed(min_iters=min_seed_chars_generated,
+                                           last_char=last_seed_char,
+                                           max_until_last_char=max_seed_chars_before_delimiter,
+                                           starting_seed_chars=seed_chars,
+                                           temperature=temperature,
+                                           digit_temperature=digit_temperature,
+                                           print_progress=print_progress)
 
         if print_progress:
             print("Generating chars...")
@@ -145,14 +149,13 @@ class TextGenerator:
         np.random.seed(random_seed)
 
         last_seed_char = None if max_seed_chars_before_delimiter is None else self.message_delimiter
-        _seed_chars = \
-            seed_chars if seed_chars is not None \
-                else self.__generate_seed(min_iters=min_seed_chars_generated,
-                                          last_char=last_seed_char,
-                                          max_until_last_char=max_seed_chars_before_delimiter,
-                                          temperature=temperature,
-                                          digit_temperature=digit_temperature,
-                                          print_progress=print_progress)
+        _seed_chars = self.__generate_seed(min_iters=min_seed_chars_generated,
+                                           last_char=last_seed_char,
+                                           max_until_last_char=max_seed_chars_before_delimiter,
+                                           starting_seed_chars=seed_chars,
+                                           temperature=temperature,
+                                           digit_temperature=digit_temperature,
+                                           print_progress=print_progress)
         message, _seed_chars = self.__generate_until(self.message_delimiter,
                                                      seed_chars=_seed_chars,
                                                      temperature=temperature,
@@ -175,7 +178,7 @@ class TextGenerator:
 
         x = np.zeros((1, self.block_size))  # Input to the model, where each element is a char_id
         for i, char in enumerate(seed_chars):  # Populate x with char_ids from the chars in seed_chars
-            x[0, i] = self.char_to_id[char]
+            x[0, i] = self.__char_to_id(char)
 
         # Predicts block_size chars, block_size - 1 of which overlap seed_chars, so we only want the last predicted char
         prediction = self.model.predict(x, verbose=0)[0][-1]
@@ -183,7 +186,7 @@ class TextGenerator:
         # Different temperature if the last character was a digit (to prevent getting stuck in digit loops)
         this_temp = \
             digit_temperature if seed_chars[-1].isdigit() else temperature
-        generated_char = self.reversed_dictionary[sample(prediction, temp=this_temp)]
+        generated_char = self.__id_to_char(sample(prediction, temp=this_temp))
 
         # Append the new char to seed_chars and shift seed_chars so that its length remains block_size
         seed_chars = seed_chars[1:]
@@ -228,6 +231,7 @@ class TextGenerator:
                         min_iters=15,
                         last_char=None,
                         max_until_last_char=5,
+                        starting_seed_chars=None,
                         temperature=0.4,
                         digit_temperature=1.2,
                         print_progress=False):
@@ -236,9 +240,11 @@ class TextGenerator:
                   + ", last char: '" + last_char
                   + "', max until last char: " + str(max_until_last_char) + "...")
 
-        seed_chars = []
+        seed_chars = [] if starting_seed_chars is None else starting_seed_chars
         if min_iters == 0:
-            seed_chars = self.__generate_random_seed_chars(self.block_size)
+            temp_seed_chars = seed_chars
+            seed_chars = self.__generate_random_seed_chars(self.block_size - len(temp_seed_chars))
+            seed_chars.extend(temp_seed_chars)
             if print_progress:
                 print("".join(seed_chars))
         else:
@@ -280,8 +286,20 @@ class TextGenerator:
     def __generate_random_seed_chars(self, size):
         seed_chars = []
         for i in np.random.randint(0, len(self.reversed_dictionary) - 1, size=size):
-            seed_chars.append(self.reversed_dictionary[i])
+            seed_chars.append(self.__id_to_char(i))
         return seed_chars
+
+    def __char_to_id(self, char):
+        try:
+            return self.char_to_id[char]
+        except:
+            return 0
+
+    def __id_to_char(self, id):
+        try:
+            return self.reversed_dictionary[id]
+        except:
+            return "<unk>"
 
 
 if __name__ == "__main__":
@@ -299,9 +317,13 @@ if __name__ == "__main__":
                 break
             except ValueError:
                 print("Error: Please enter an integer number")
+
+        seed_chars = input("Enter seed chars: ").split()
+
         messages, seed_chars = generator.generate_messages(num_messages=num_messages,
-                                                           min_seed_chars_generated=5,
-                                                           max_seed_chars_before_delimiter=5,
+                                                           min_seed_chars_generated=0 if seed_chars else 5,
+                                                           max_seed_chars_before_delimiter=0 if seed_chars else 5,
+                                                           seed_chars=seed_chars,
                                                            random_seed=seed,
                                                            print_progress=True)
         print("Final seed_chars: " + "".join(seed_chars))
