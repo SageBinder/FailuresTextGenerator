@@ -30,7 +30,7 @@ class TextGenerator:
             print("Error while loading model: h5py is not available.")
             exit(1)
         except:
-            print(r"Error while loading model: ¯\_(ツ)_/¯")
+            print(r"Error while loading model: ¯\_(ツ)_/¯ maybe provided path doesn't exist?")
             exit(1)
         print("Model loaded successfully!")
 
@@ -237,14 +237,18 @@ class TextGenerator:
                         print_progress=False):
         if print_progress:
             print("Generating seed with min iters: " + str(min_iters)
-                  + ", last char: '" + last_char
-                  + "', max until last char: " + str(max_until_last_char) + "...")
+                  + ", last char: '"
+                  + str(last_char)
+                  + "', max until last char: "
+                  + str(max_until_last_char) + "...")
 
         seed_chars = [] if starting_seed_chars is None else starting_seed_chars
         if min_iters == 0:
             temp_seed_chars = seed_chars
             seed_chars = self.__generate_random_seed_chars(self.block_size - len(temp_seed_chars))
             seed_chars.extend(temp_seed_chars)
+            if len(seed_chars) > self.block_size:
+                seed_chars = seed_chars[-self.block_size:]
             if print_progress:
                 print("".join(seed_chars))
         else:
