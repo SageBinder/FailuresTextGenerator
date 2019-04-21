@@ -1,6 +1,6 @@
+import argparse
 import os
 import random
-import sys
 
 import numpy as np
 import pandas as pd
@@ -8,20 +8,24 @@ import pandas as pd
 message_delimiter = "<eom>"
 
 if __name__ == "__main__":
-    raw_csv_data_path = os.path.abspath(sys.argv[1])       # argv[1] example: "raw_csv\trash.csv
-    user_to_train = sys.argv[2]                            # argv[2] example: "saggisponge#1234"
+    parser = argparse.ArgumentParser()
+    parser.add_argument("csv_path", type=str)
+    parser.add_argument("preprocessed_path", type=str)
+    parser.add_argument("--user", type=str)
+    args = parser.parse_args()
+
+    csv_path = os.path.abspath(args.csv_path)
+    user_to_train = args.user if args.user is not None else "everyone"
     username = user_to_train.replace("#", "")
+    preprocessed_data_path = args.preprocessed_path
 
-    # example preprocessed_data_path will be: "saggisponge1234\trash"
-    preprocessed_data_path = \
-        os.path.join(os.path.abspath(username), os.path.split(os.path.splitext(raw_csv_data_path)[0])[1])
-
-    print("Reading raw csv data from: " + raw_csv_data_path)
+    print("Reading raw csv data from: " + csv_path)
     print("Extracting messages from: " + user_to_train)
     print("Saving preprocessed data to: " + preprocessed_data_path)
 
-    chat = pd.read_csv(raw_csv_data_path, usecols=["Author", "Content"], delimiter=";")
-    chat = chat[chat["Author"] == user_to_train]
+    chat = pd.read_csv(csv_path, usecols=["Author", "Content"], delimiter=";")
+    if args.user is not None:
+        chat = chat[chat["Author"] == user_to_train]
     chat = chat.dropna()
 
     # Append a message delimiter after each message

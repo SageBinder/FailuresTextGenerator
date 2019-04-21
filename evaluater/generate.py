@@ -320,12 +320,13 @@ if __name__ == "__main__":
 
         seed_chars = input("Enter seed chars: ").split()
 
+        print("Generating...")
         messages, seed_chars = generator.generate_messages(num_messages=num_messages,
-                                                           min_seed_chars_generated=0 if seed_chars else 5,
-                                                           max_seed_chars_before_delimiter=0 if seed_chars else 5,
+                                                           min_seed_chars_generated=0 if seed_chars else 10,
+                                                           max_seed_chars_before_delimiter=None if seed_chars else 10,
                                                            seed_chars=seed_chars,
                                                            random_seed=seed,
-                                                           print_progress=True)
+                                                           print_progress=False)
         print("Final seed_chars: " + "".join(seed_chars))
         print("\nFinal text:\n---")
         for message in messages:
