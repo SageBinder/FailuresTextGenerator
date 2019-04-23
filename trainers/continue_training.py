@@ -52,6 +52,7 @@ model.fit_generator(train_data_generator.generate(), len(train_data) // (batch_s
                     validation_data=test_data_generator.generate(),
                     validation_steps=len(test_data) // (batch_size * num_steps),
                     callbacks=[checkpointer])
+print("Saving final model to " + os.path.join(model_dir, model_name + "-final.hdf5"))
 model.save(os.path.join(model_dir, model_name + "-final.hdf5"))
 with open(model_dir + r"\reversed_dictionary.pkl", "wb") as f:
     reversed_dictionary["message_delimiter"] = preprocess.message_delimiter
